@@ -1,5 +1,7 @@
 # NPapitest-ui
-### [后端地址](https://github.com/Night-Parrot/NPapitest "后端地址")
+ 
+##### 服务化接口测试工具，使用Excel保存用例
+##### 后端基于FLASK框架开发，前端基于VUE+Ant Design实现，[后端地址](https://github.com/Night-Parrot/NPapitest "后端地址")
 
 ## Project setup
 ```
