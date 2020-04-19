@@ -21,29 +21,38 @@
               :pagination="pagination_yl_list" :loading="loading_yl_list" size="middle" @change="handleTableChange_ylxx"
               style="margin-left: 30px;margin-right: 30px;">
               <H3 slot="title">用例列表</H3>
+              <span slot="ylmc" slot-scope="text, record">
+                <a-tag color="#f50" :visible="record.bjzt == '1'">用例编辑中···</a-tag>
+                {{text}}
+              </span>
               <span slot="action_yl" slot-scope="record">
                 <!-- <a-button type="primary" :loading="loading_runcanse" @click="click_info(record.ylbh)">执行</a-button> -->
-                <a-button type="primary" @click="child_draw(record.ylbh)"><a-icon type="smile" theme="twoTone" twoToneColor="#ffe600" />执行</a-button>
+                <a-button type="primary" v-if="record.bjzt == '2'" @click="child_draw(record.ylbh)" :disabled="record.bjzt == '1'"><a-icon type="smile" theme="twoTone" twoToneColor="#ffe600" />执行</a-button>
+                <a-divider type="vertical" v-if="record.bjzt == '2'" />
+                <a-button type="primary" v-if="record.bjzt == '2'" :loading="loading_download" @click="click_dl_case(record.ylbh)" :disabled="record.bjzt == '1'"><a-icon type="cloud-download"/>下载</a-button>
+                <a-divider type="vertical" v-if="record.bjzt == '2'" />
+                <a-button type="primary" @click="edit_page(record.ylbh, record.ylmc)"><a-icon type="edit" theme="twoTone" twoToneColor="#ffe600" />编辑</a-button>
                 <a-divider type="vertical" />
-                <a-button type="primary" :loading="loading_download" @click="click_dl_case(record.ylbh)"><a-icon type="cloud-download"/>下载</a-button>
-                <a-divider type="vertical" />
+                <a-button type="primary" @click="view_page(record.ylbh, record.ylmc)"><a-icon type="edit" theme="twoTone" twoToneColor="#ffe600" />查看</a-button>
                 <!-- <a-button type="primary">更新用例</a-button> -->
-                <a-popconfirm title="确认删除么?" @confirm="() => del_yl(record.ylbh)" okText="确认" cancelText="取消">
-                  <a-button type="primary" :loading="loading" @click="claer_ylgx"><a-icon type="delete"/>删除</a-button>
+                <a-divider type="vertical" />
+                <a-popconfirm title="确认删除么?" @confirm="() => del_yl(record.ylbh)" okText="确认" cancelText="取消" v-if="record.bjzt == '2'">
+                  <a-button type="primary" :loading="loading" @click="claer_ylgx" :disabled="record.bjzt == '1'"><a-icon type="delete"/>删除</a-button>
                 </a-popconfirm>
-                <div style="float: right;width: 100px;margin-top: 1px;height: 30px;">
+                <a-divider type="vertical" v-if="record.bjzt == '2'"/>
+                <div style="float: right;width: 100px;margin-top: 1px;height: 30px;" v-if="record.bjzt == '2'">
                   <a-upload-dragger
                       name="file"
                       :multiple="false"
                       :showUploadList="false"
                       :fileList="fileList_upyl"
                       :beforeUpload="beforeUpload_ylgx"
-                      :disabled="fileList_upyl.length !== 0"
+                      :disabled="fileList_upyl.length !== 0 || record.bjzt == '1'"
                       @change="handleChange_ylgx(record.ylbh)"
                     >
                     <!-- :data="updatefile_fun(record.xh)" -->
                     <!-- <a-popconfirm title="确认更新么?" @cancel="claer_ylgx" @confirm="() => handleChange_ylgx(record.ylbh)" :visible="record.update == 1"  okText="确认" cancelText="取消"> -->
-                      <p style="margin-top:3px"><a-icon type="cloud-upload"/> 用例更新</p>
+                      <p><a-icon type="cloud-upload"/>用例更新</p>
                     <!-- </a-popconfirm> -->
                   </a-upload-dragger>
                 </div>
@@ -60,8 +69,22 @@
         :visible="visible_zxcs"
         :destroyOnClose="true"
       >
-        <a-button type="primary" style="margin-bottom: 10px" @click="click_info" :loading="loading_runcanse">按照以下参数执行用例</a-button>
-        <a-table :columns="columns_zxcs" :scroll="{y:750}" :pagination="placement_zxcs" :dataSource="data_zxcs" tableLayout="fixed" bordered>
+        <div>
+          <a-button type="primary" style="margin-bottom: 10px;float: left;" @click="click_info" :loading="loading_runcanse">按照以下参数执行用例</a-button>
+          <a-switch checkedChildren="给我算" unCheckedChildren="不稀罕" style="float: right;margin-top: 5px" @change="change_fgdjs" :checked="fgdjs"/>
+          <a-tag v-if="fgdjs" color="#87d068" style="margin-top: 5px;margin-right: 20px;float: right;">本次执行将计算用例覆盖度（用例内执行接口数÷总接口数）</a-tag>
+          <a-tag v-else color="#f50" style="margin-top: 5px;margin-right: 20px;float: right;">本次执行将不计算覆盖度，一般是要计算的哦╭(￣▽￣)╯╧═╧</a-tag>
+        </div>
+        <div class="components-input-demo-presuffix">
+          <a-input placeholder="请输入swagger的api-docs地址，格式http://xxxxx，如果没有，可以直接输入总数量，例如12" v-model="api_docs" ref="userNameInput">
+            <a-icon slot="prefix" type="api" />
+            <a-tooltip slot="suffix" title="用来计算用例的覆盖程度，请务必填写最新的地址，如果不输入，就不会计算了">
+              <a-icon type="info-circle" style="color: rgba(0,0,0,.45)" />
+            </a-tooltip>
+          </a-input>
+        </div>
+        <br/>
+        <a-table :columns="columns_zxcs" :scroll="{y:700}" :pagination="placement_zxcs" :dataSource="data_zxcs" tableLayout="fixed" bordered>
           <!-- <template 
             v-for="col in ['zxcs_key', 'zxcs_value']"
             :slot="col"
@@ -128,7 +151,76 @@
       <a-drawer title="统计分析" :placement="placement" :closable="true" @close="onClose" :visible="visible_tjfx"
         :destroyOnClose="true" height="800">
         <div>
-          <h4>暂时没想好统计内容</h4>
+          <a-statistic title="累计执行次数" :value="1123" suffix="次" style="margin-right: 50px" />
+          <a-statistic title="平均通过率" :precision="2" :value="85.54" suffix="%" />
+          <a-statistic title="平均覆盖率" :precision="2" :value="72.58" suffix="%" />
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+          <h1>假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！假装有图！</h1>
+        </div>
+      </a-drawer>
+    </div>
+    <!-- CI持续集成的抽屉 -->
+    <div>
+      <a-drawer title="CI持续集成" :placement="placement" :closable="true" @close="onClose" :visible="visible_CI"
+        :destroyOnClose="true" height="750">
+        <div>
+          <div>
+          <h3 style="margin-left: 15px;">CI列表</h3>
+          <a-table :columns="columns_ci" :rowKey="record => record.key" :dataSource="data_ci" @change="handld_ci" :loading="loading_ci" size="middle" style="height: 350px;width: 65%;margin-top: 10px;margin-left: 15px;float: left;" :pagination="pagination_ci" >
+            <span slot="operation" slot-scope="text, record">
+              <a-button type="primary" size="small" @click="ci_info(record)" :disabled="record.ck === 1">查看</a-button>
+              <a-divider type="vertical" />
+              <a-button type="primary" size="small" @click="edit_ci(record)" :disabled="record.bj === 1">编辑</a-button>
+              <a-divider type="vertical" />
+              <a-popconfirm title="确认删除么?" @confirm="() => del_ci(record)" okText="确认" cancelText="取消">
+                <a-button type="primary" size="small" >删除</a-button>
+              </a-popconfirm>
+            </span>
+          </a-table>
+          </div>
+          <div>
+            <a-transfer
+              :dataSource="mockData"
+              showSearch
+              style="float: left;margin-top: 10px;margin-left: 30px;"
+              :locale="{itemUnit:'个用例', itemsUnit:'个用例',notFoundContent:'列表为空',searchPlaceholder:'请输入用例关键字'}"
+              :listStyle="{
+                width: '250px',
+                height: '290px',  
+              }"
+              :operations="['添加', '删除']"
+              :disabled="ci_disabled"
+              :targetKeys="targetKeys"
+              @change="handleChange_ci"
+              :render="item => `${item.title}`"
+            >
+            <span slot="notFoundContent">
+              没数据
+            </span>
+            </a-transfer>
+            <a-button type="primary" size="small" style="float: right;right: 13.3%;margin-top: 5px;" ghost :disabled="ci_disabled" @click="add_ci">提交</a-button>
+            <a-divider type="vertical" />
+            <a-button type="primary" size="small" style="float: right;right: 15.75%;margin-top: 5px;" ghost @click="ci_clear">清空</a-button>
+          </div>
+        <div style="float: left;clear: left;padding-left: 15px;padding-right: 30px;width: 100%;">
+          <h3>Linux部署命令</h3>
+          <h6 style="float: left;clear: left">命令需要调整后才可以使用</h6>
+          <a-input placeholder="点击查看或编辑时，就会有命令了(∩•̀ω•́)⊃-*⋆" size="large" disabled :value="linux_input" style="width: 95%;float: left;clear: left" /> 
+          <a-button type="primary" :disabled="linux_input === ''" v-clipboard:copy="linux_input" v-clipboard:success="onCopy" v-clipboard:error="onError" style="margin-top: 21px; height: 40px" >复制命令</a-button>
+          <br style="float: left;clear: left"/>
+          <br style="float: left;clear: left" />
+          <h3 style="float: left;clear: left">Docker部署命令</h3>
+          <h6 style="float: left;clear: left">命令需要调整后才可以使用</h6>
+          <a-input placeholder="点击查看或编辑时，就会有命令了(∩•̀ω•́)⊃-*⋆" size="large" disabled :value="docker_input" style="width: 95%;float: left;clear: left"/>
+          <a-button type="primary" :disabled="docker_input === ''"  v-clipboard:copy="linux_input" v-clipboard:success="onCopy" v-clipboard:error="onError" style="margin-top: 54px; height: 40px">复制命令</a-button>
+        </div>
         </div>
       </a-drawer>
     </div>
@@ -145,21 +237,21 @@
           </div>
           <div style="float: right;width: 75%;">
             <a-radio-group :value="target_key" @change="handleSizeChange"
-              style="margin-left:5px;margin-right:5px;margin-top: 5px;margin-bottom: 5px" buttonStyle="solid">
-              <a-badge :count="count[0]" overflowCount="count[0]">
-              <a-radio-button value="1">全部</a-radio-button>
+              style="margin-left:5px;margin-right:5px;margin-top: 5px;margin-bottom: 5px;" buttonStyle="solid">
+              <a-badge :count="count[0]" :overflowCount="overflowCount" style="z-index: 2;">
+                <a-radio-button value="1" style="z-index: 0;">全部</a-radio-button>
               </a-badge>
-              <a-badge :count="count[1]" overflowCount="count[1]">
-              <a-radio-button value="2">请求成功</a-radio-button>
+              <a-badge :count="count[1]" :overflowCount="overflowCount" style="z-index: 2;">
+                <a-radio-button value="2" style="z-index: 0;">请求成功</a-radio-button>
               </a-badge>
-              <a-badge :count="count[2]" overflowCount="count[2]">
-              <a-radio-button value="3">请求失败</a-radio-button>
+              <a-badge :count="count[2]" :overflowCount="overflowCount" style="z-index: 2;">
+                <a-radio-button value="3" style="z-index: 0;">请求失败</a-radio-button>
               </a-badge>
-              <a-badge :count="count[3]" overflowCount="count[3]">
-              <a-radio-button value="4">验证通过</a-radio-button>
+              <a-badge :count="count[3]" :overflowCount="overflowCount" style="z-index: 2;">
+                <a-radio-button value="4" style="z-index: 0;">验证通过</a-radio-button>
               </a-badge>
-              <a-badge :count="count[4]" overflowCount="count[4]">
-              <a-radio-button value="5">验证失败</a-radio-button>
+              <a-badge :count="count[4]" :overflowCount="overflowCount" style="z-index: 2;">
+                <a-radio-button value="5" style="z-index: 0;">验证失败</a-radio-button>
               </a-badge>
             </a-radio-group>
             <a-input-search placeholder="请输入用例名称关键字" style="float: right;width: 400px;margin-right: 5px;margin-top: 5px" v-model="gjz" @search="onSearch" enterButton />
@@ -167,8 +259,8 @@
             <div style="width: 450px;float: right;margin-right: 55px;margin-top: 5px">
               <div style="width: 400px;float: left;">
                 <a-tooltip placement="top" :title="run_status === '0' ? '执行中': (run_status === '1'? '已完成': '已中断')">
-                  <a-progress :percent="percent.toFixed(2)" :status="run_status === '1'? 'success' : (run_status === '0' ? 'active' : 'nomal')" style="margin-top: 3px;padding-right: 50px;"
-                  strokeWidth="20" :strokeColor="run_status === '1' ? '#7fb80e' : (run_status === '0' ? '#009ad6' : '#f15a22')" />
+                  <a-progress :percent="percent" :status="run_status === '1'? 'success' : (run_status === '0' ? 'active' : 'normal')" style="margin-top: 3px;padding-right: 50px;"
+                  :strokeWidth="strokeWidth" :strokeColor="run_status === '1' ? '#7fb80e' : (run_status === '0' ? '#009ad6' : '#f15a22')" />
                 </a-tooltip>
               </div>
               <div style="width:20px;float: right;margin-top: 5px;width: 30px; height: 30px;margin-right: 20px">
@@ -183,10 +275,11 @@
                   <a-tag :color="text==='通过' ? '#45b97c' : '#ed1941'" :key="text" style="font-size:small;font-weight:bold">{{text}}
                   </a-tag>
                 </span>
-              <a-table slot="expandedRowRender" slot-scope="record" :columns="innerColumns_zxinfo"
-                :dataSource="record.innerlist" :rowKey="record => record.key" :pagination="false" size="small" :expandRowByClick="false"
+              <a-table slot="expandedRowRender" slot-scope="record" :columns="innerColumns_zxinfo" :pagination="false"
+                :dataSource="record.innerlist" :rowKey="record => record.key"  size="small" :expandRowByClick="false"
                 style="margin-left: 15px;margin-right: 15px">
-                <p slot="expandedRowRender" slot-scope="record" style="margin: 0">{{record.matchinfo}}</p>
+                <p v-if="record.ycxx === null" slot="expandedRowRender" slot-scope="record" style="margin: 0">{{record.matchinfo}}</p>
+                <p v-else slot="expandedRowRender" slot-scope="record" style="margin: 0">{{record.ycxx}}</p>
               </a-table>
             </a-table>
           </div>
@@ -222,7 +315,7 @@
         </div>
         <div>
           <h1>用例模板生成说明：</h1>
-          <img preview='0' src='../assets/info.png' height='260' width='550' style="cursor:pointer"></img>
+          <img preview='0' src='../assets/info.png' height='260' width='550' style="cursor:pointer" />
           <h2></h2>
           <h2>不要直接使用swagger地址</h2>
           <h2>在访问swagger页面的时候，查看所有请求</h2>
@@ -234,17 +327,26 @@
 
     <!-- =============================================================================================================================== -->
     <div style="margin-left: 30px;">
-      <a-button type="primary" :loading="loading" @click="showDrawer_ylgl" style="margin-top: 40px">用例管理</a-button>
+      <a-button type="primary" :loading="loading" @click="showDrawer_ylgl" style="margin-top: 20px">用例管理</a-button>
       <a-divider type="vertical" />
-      <a-button type="primary" :loading="loading" style="margin-top: 15px" @click="showDrawer_tjfx">统计分析</a-button>
+      <a-button type="primary" :loading="loading" style="margin-top: 20px" @click="showDrawer_tjfx">统计分析</a-button>
       <a-divider type="vertical" />
-      <a-button type="primary" :loading="loading" style="margin-top: 15px" @click="showDrawer_ylsc">用例模板生成</a-button>
+      <a-button type="primary" :loading="loading" style="margin-top: 20px" @click="showDrawer_ylsc">用例模板生成</a-button>
+      <a-divider type="vertical" />
+      <a-button type="primary" :loading="loading" style="margin-top: 20px" @click="dl_kbyl">下载空白模板</a-button>
+      <a-divider type="vertical" />
+      <a-button type="primary" :loading="loading" style="margin-top: 20px" @click="ci_open">CI持续集成</a-button>
     </div>
     <div>
       <a-table :columns="columns" :rowKey="record => record.zxbh" :dataSource="data.reslist"
         :pagination="pagination_zx_list" :loading="loading_list" @change="handleTableChange_zxxx"
         style="margin-left: 30px;margin-right: 30px;margin-top: 30px">
         <H3 slot="title">用例执行记录</H3>
+        <span slot="ylmc" slot-scope="text, record">
+          <a-tag color="#921AFF" :visible="record.zxfs == '0'">CI调度</a-tag>
+          <a-tag color="#00BB00" :visible="record.zxfs == '2'">定时巡检</a-tag>
+          {{text}}
+        </span>
         <span slot="action" slot-scope="record">
           <a-button type="primary" @click="click_zxinfo(record.zxbh)"><a-icon type="pie-chart" />详情</a-button>
           <a-divider type="vertical" />
@@ -260,8 +362,41 @@
 
 
 <script>
-  import G2 from "@antv/g2";
-  import axios from "axios";
+// import G2 from "@antv/g2";
+import { Chart } from '@antv/g2';
+import axios from "axios";
+// ==============CI持续集成列表===============
+const columns_ci = [
+  {
+    title: '地址',
+    dataIndex: 'url',
+    width: '40%',
+    align: 'center',
+  },
+  {
+    title: '执行次数',
+    dataIndex: 'times',
+    align: 'center',
+  },
+  {
+    title: '用例数量',
+    dataIndex: 'ylsl',
+    align: 'center',
+  },
+  {
+    title: '最新调用时间',
+    dataIndex: 'zxdysj',
+    width: '20%',
+    align: 'center',
+  },
+  {
+    title: '操作',
+    width: '20%',
+    dataIndex: 'operation',
+    align: 'center',
+    scopedSlots: { customRender: 'operation' },
+  }
+];
 
 // ==============执行参数的列名===============
 const columns_zxcs = [
@@ -307,7 +442,8 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
       dataIndex: "ylmc",
       key: "ylmc",
       width: 400,
-      align: "center"
+      align: "center",
+      scopedSlots: { customRender: "ylmc" }
     },
     {
       title: "执行时间",
@@ -351,6 +487,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
       dataIndex: "ylmc",
       key: "ylmc",
       // width: "20%",
+      scopedSlots: { customRender: "ylmc" },
       align: "center"
     },
     {
@@ -370,7 +507,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
     {
       title: "操作",
       key: "action_yl",
-      width: "23%",
+      width: "35%",
       scopedSlots: { customRender: "action_yl" },
       align: "center"
     }
@@ -457,6 +594,26 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
     data() {
       this.cacheData = data_zxcs.map(item => ({ ...item }));
       return {
+        strokeWidth: 20,
+        overflowCount: 99999,
+        ci_key: '',
+        ci_disabled: false,
+        loading_ci: false,
+        docker_input: "",
+        linux_input: "",
+        pagination_ci: {
+          defaultPageSize: 5,
+          hideOnSinglePage: true,
+          current: 1,
+          total: null,
+        },
+        mockData: [],
+        targetKeys: [],
+        data_ci: [],
+        columns_ci: columns_ci,
+        visible_CI: false,
+        api_docs: '',
+        fgdjs: true,
         count: [0,0,0,0,0], //执行信息中的数量集合
         percent: 0, // 执行进度
         run_status: '0', // 0  执行中，1  已完成，2  已中断  字符串格式
@@ -589,7 +746,16 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
         this.gjz = '';
         this.percent = 0,
         this.run_status = '0',
-        this.count = [0,0,0,0,0]
+        this.count = [0,0,0,0,0],
+        this.api_docs = '',
+        this.visible_CI = false,
+        this.ci_key = '',
+        this.ci_disabled = false,
+        this.mockData = [],
+        this.targetKeys = [],
+        this.data_ci = [],
+        this.docker_input = "",
+        this.linux_input = ""
       },
       fetch(pagenum) {
         this.loading_list = true;
@@ -611,7 +777,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
       },
       fetch_ylzxinfo(pagenum) {
         //执行信息的详情获取
-        this.run_status = 0;
+        this.run_status = '0';
         this.loading_zxinfo = true;
         // this.spinning = true;
         axios
@@ -625,7 +791,11 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
             this.placement_zxinfo.current = response.data.nowpage;
             this.count = response.data.counts;
             this.run_status = response.data.zt;
-            this.percent = response.data.jd;
+            if (response.data.jd === null) {
+              this.percent = 0;
+            } else {
+              this.percent = Number(response.data.jd.toFixed(2));
+            }
             document.getElementById('char_xysj').innerHTML = '';
             document.getElementById('char_cgl').innerHTML = '';
             document.getElementById('char_tgl').innerHTML = '';
@@ -655,7 +825,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
         axios
           .post(
             "runcase",
-            { ylbh: this.data_zxcs_def.ylbh, list: this.data_zxcs_def.reslist},
+            { ylbh: this.data_zxcs_def.ylbh, list: this.data_zxcs_def.reslist, sfjs: this.fgdjs, api_docs: this.api_docs},
             {
               headers: { "Content-Type": "application/json", Accept: "*/*" }
             }
@@ -703,42 +873,42 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
         this.loading_del = false;
       },
       init_char_cgl() {
-        var chart = new G2.Chart({
+        var chart = new Chart({
           container: "char_cgl",
           // forceFit: true,
-          height: 250,
-          width: 465,
+          height: 230,
+          width: 445,
           // animate: true
         });
-        chart.source(this.data_char_all[0], {
-          percent: {
-            formatter: function formatter(val) {
+        chart.data(this.data_char_all[0]);
+        chart.scale('percent', {
+            formatter: (val) => {
               val = (val * 100).toFixed(2) + "%";
               return val;
-            }
-          }
-        });
-        chart.coord("theta", {
+            },
+          });
+        chart.coordinate("theta", {
           radius: 0.75,
           innerRadius: 0.6
         });
         chart.tooltip({
           showTitle: false,
-          itemTpl:
-            '<li><span style="background-color:{color};" class="g2-tooltip-marker"></span>{name}: {value}</li>'
-        });
-        // 辅助文本
-        chart.guide().html({
-          position: ["50%", "50%"],
-          html:
-            '<div style="color:#8c8c8c;font-size: 14px;text-align: center;width: 4em;">成功率</div>',
-          alignX: "middle",
-          alignY: "middle"
-        });
-        // var interval = chart
+          itemTpl: '<li class="g2-tooltip-list-item"><span style="background-color:{color};" class="g2-tooltip-marker"></span>{name}: {value}</li>'
+            });
+        chart.annotation().text({
+            position: ['50%', '58%'],
+            content: '成功率',
+            style: {
+              fontSize: 14,
+              fill: '#8c8c8c',
+              textAlign: 'center',
+            },
+            offsetY: -20,
+          })
         chart
-          .intervalStack()
+          .interval()
           .position("percent")
+          .adjust('stack')
           .color("item")
           .label("percent", {
             formatter: function formatter(val, item) {
@@ -761,42 +931,52 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
         // interval.setSelected(this.data_char_all[0][0]);
       },
       init_char_tgl() {
-        var chart = new G2.Chart({
+        var chart = new Chart({
           container: "char_tgl",
           // forceFit: true,
-          height: 250,
-          width: 465,
+          height: 230,
+          width: 445,
           animate: true
           // padding: [50, 250, 50, 50],
         });
-        chart.source(this.data_char_all[1], {
-          percent: {
-            formatter: function formatter(val) {
+        chart.data(this.data_char_all[1]);
+        chart.scale('percent', {
+            formatter: (val) => {
               val = (val * 100).toFixed(2) + "%";
               return val;
-            }
-          }
-        });
-        chart.coord("theta", {
+            },
+          });
+        chart.coordinate("theta", {
           radius: 0.75,
           innerRadius: 0.6
         });
         chart.tooltip({
           showTitle: false,
           itemTpl:
-            '<li><span style="background-color:{color};" class="g2-tooltip-marker"></span>{name}: {value}</li>'
+            '<li class="g2-tooltip-list-item"><span style="background-color:{color};" class="g2-tooltip-marker"></span>{name}: {value}</li>'
         });
         // 辅助文本
-        chart.guide().html({
-          position: ["50%", "50%"],
-          html:
-            '<div style="color:#8c8c8c;font-size: 14px;text-align: center;width: 4em;">通过率</div>',
-          alignX: "middle",
-          alignY: "middle"
-        });
+        // chart.guide().html({
+        //   position: ["50%", "50%"],
+        //   html:
+        //     '<div style="color:#8c8c8c;font-size: 14px;text-align: center;width: 4em;">通过率</div>',
+        //   alignX: "middle",
+        //   alignY: "middle"
+        // });
+        chart.annotation().text({
+            position: ['50%', '58%'],
+            content: '通过率',
+            style: {
+              fontSize: 14,
+              fill: '#8c8c8c',
+              textAlign: 'center',
+            },
+            offsetY: -20,
+          })
         // var interval = chart
         chart
-          .intervalStack()
+          .interval()
+          .adjust('stack')
           .position("percent")
           .color("item")
           .label("percent", {
@@ -820,20 +1000,29 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
         // interval.setSelected(this.data_char_all[1][0]);
       },
       init_char_xysj() {
-        var chart = new G2.Chart({
+        var chart = new Chart({
           container: "char_xysj",
           height: 300,
           width: 465,
           padding: [20, 60, 60, 60]
         });
-        chart.source(this.char_xysj, {
-          expected: {
-            ticks: [0, 3000, 8000]
-          },
-          actual: {
-            ticks: [0, 3000, 8000]
-          }
-        });
+        chart.data(this.char_xysj)
+        // chart.source(this.char_xysj, {
+        //   expected: {
+        //     ticks: [0, 3000, 8000]
+        //   },
+        //   actual: {
+        //     ticks: [0, 3000, 8000]
+        //   }
+        // });
+        chart.scale({
+            expected: {
+              ticks: [0, 3000, 8000]
+            },
+            actual: {
+              ticks: [0, 3000, 8000]
+            },
+          });
         chart.axis("date", false);
         chart.axis("actual", false);
         chart.axis("expected", {
@@ -850,7 +1039,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
           }
         });
         chart.legend(false);
-        chart.interval().position('date*expected').color('#ffe600').shape('borderRadius').tooltip('expected').opacity(0.6);
+        chart.interval().position('date*expected').color('#ffe600').shape('borderRadius').tooltip('expected').style({opacity: 0.6,});
         chart.interval().position('date*actual').color('#a7324a').tooltip('actual').shape('date*actual', function (date, val) {
           if (val === 0) {
             return;
@@ -858,7 +1047,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
             return 'borderRadius';
           }
         });
-        chart.guide().text({
+        chart.annotation().text({
           position: ["min", "max"],
           content: "响应时间分布(单位: 毫秒)",
           style: {
@@ -927,7 +1116,7 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
         setTimeout(() => {
           this.fetch_ylxx(1);
           this.pagination_yl_list.current = 1;
-        }, 1000);
+        }, 2000);
       },
       casemake() {
         this.loading_makecase = true;
@@ -1003,6 +1192,12 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
           this.placement_zxcs.pageSize = response.data.maxsize;
           this.data_zxcs = response.data.reslist;
           this.data_zxcs_def = response.data;
+          this.api_docs = response.data.api_docs
+          if (this.api_docs !== '') {
+            this.fgdjs = true
+          } else {
+            this.fgdjs = false
+          }
         })
       },
       onClose_zxcs () {
@@ -1109,7 +1304,173 @@ const data_zxcs = []; // 下面的data前的数据调用，需要这个参数，
             }
           });
         this.loading_zxinfo = false;
-      }
+      },
+      edit_page(ylbh, ylmc) {
+        // window.open('http://172.18.48.41:8585/' + 'edit_page/' + ylbh + '/' + ylmc);
+        // this.$router.push({name: '文档编辑', params: {'ylbh': ylbh, 'ylmc': ylmc}})
+        let edit_url = this.$router.resolve({name: '文档编辑', query: {'ylbh': ylbh, 'ylmc': ylmc}})
+        // params参数在跳转页中获取不到，所以改成了qurey方式，会导致url不太好看
+        window.open(edit_url.href, '_blank')
+        setTimeout(() => {
+          this.fetch_ylxx(this.pagination_yl_list.current);
+        }, 2000)
+      },
+      view_page(ylbh, ylmc) {
+        // window.open('http://172.18.48.41:8585/' + 'edit_page/' + ylbh + '/' + ylmc);
+        // this.$router.push({name: '文档编辑', params: {'ylbh': ylbh, 'ylmc': ylmc}})
+        let view_url = this.$router.resolve({name: '文档查看', query: {'ylbh': ylbh, 'ylmc': ylmc}})
+        // params参数在跳转页中获取不到，所以改成了qurey方式，会导致url不太好看
+        window.open(view_url.href, '_blank')
+      },
+      change_fgdjs() {
+        this.fgdjs = !this.fgdjs;
+      },
+      dl_kbyl() {
+                axios({
+          method: "get",
+          url: "/downloadkbyl",
+          responseType: "blob"
+        }).then(response => {
+          if (response.headers["content-type"] != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+            this.$message.error("用例下载失败，可能是文件损坏或丢失，请联系管理员")
+          }
+          else {
+
+            let blob = new Blob([response.data], {
+              type: response.headers["content-type"]
+            });
+            let downloadElement = document.createElement("a");
+            let href = window.URL.createObjectURL(blob); // 创建下载的链接
+            downloadElement.href = href;
+            downloadElement.download = '说明用例.xlsx'
+            document.body.appendChild(downloadElement);
+            downloadElement.click(); // 点击下载
+            document.body.removeChild(downloadElement); // 下载完成移除元素
+            window.URL.revokeObjectURL(href); // 释放掉blob对象
+          }
+        });
+      },
+      ci_open() {
+        this.ci_yl_list();
+        this.ci_list(1);
+        this.visible_CI = true;
+      },
+      handleChange_ci(targetKeys, direction, moveKeys) {
+        this.targetKeys = targetKeys;
+      },
+      ci_yl_list() {
+        axios.get(this.xmid + "/ci_yl_list").then(response => {
+          if (response.status === 200){
+            this.mockData = response.data
+          }
+        })
+      },
+      ci_list(pagenum) {
+        axios.get(this.xmid + "/ci_list/" + pagenum).then(response => {
+          if (response.status === 200){
+            this.data_ci = response.data.reslist
+            this.pagination_ci.current = pagenum
+            this.pagination_ci.total = response.data.maxsize
+          }
+        })
+      },
+      handld_ci(pagenum) {
+        this.loading_ci = true;
+        this.ci_list(pagenum.current);
+        this.ci_clear();
+        this.loading_ci = false;
+      },
+      ci_info(arr_record) {
+        this.ci_disabled = true;
+        for (var j_up = 0,len_up=this.data_ci.length; j_up < len_up; j_up++) {
+          this.data_ci[j_up]['ck'] = 0;
+          this.data_ci[j_up]['bj'] = 0;
+        }
+        arr_record.ck = 1;
+        axios.get("ci_info/" + arr_record.key).then(response => {
+          if (response.data.result === 'success'){
+            this.ci_yl_list();
+            var target_list = []
+            for (var j = 0,len=response.data.res_list.length; j < len; j++) {
+                this.mockData.shift(response.data.res_list[j])
+                target_list.push(response.data.res_list[j]['key'])
+              }
+            this.targetKeys = target_list;
+            this.linux_input = response.data.api_linux;
+            this.docker_input = response.data.api_docker;
+          }
+        })
+      },
+      ci_clear() {
+        this.ci_key = '';
+        this.ci_disabled = false;
+        this.linux_input = '';
+        this.docker_input = '';
+        this.targetKeys = [];
+        for (var j_up = 0,len_up=this.data_ci.length; j_up < len_up; j_up++) {
+          this.data_ci[j_up]['ck'] = 0;
+          this.data_ci[j_up]['bj'] = 0;
+        }
+        this.ci_yl_list();
+      },
+      add_ci() {
+        if (this.targetKeys.length === 0){
+          this.$message.error('用例不可为空（╬￣皿￣）')
+        } else if (this.ci_key === '') {
+        this.ci_disabled = true;
+        axios.post('add_ci', {xmurl: this.xmid, ylinfo: this.targetKeys}).then(response => {
+          if (response.data.result === 'success'){
+            this.ci_list(1);
+            this.ci_clear();
+            this.$message.success('创建成功乁( ˙ ω˙乁)')
+          }
+        })} else {
+          axios.patch('update_ci', { ci_key: this.ci_key, ylinfo: this.targetKeys}).then( response => {
+            if (response.data.result === 'success'){
+              this.ci_list(1);
+              this.ci_clear();
+              this.$message.success('更新成功乁( ˙ ω˙乁)')
+            }
+          })
+        }
+      },
+      edit_ci(arr_record) {
+        this.ci_disabled = false;
+        for (var j_up = 0,len_up=this.data_ci.length; j_up < len_up; j_up++) {
+          this.data_ci[j_up]['ck'] = 0;
+          this.data_ci[j_up]['bj'] = 0;
+        }
+        arr_record.bj = 1;
+        this.ci_key = arr_record.key;
+        axios.get("ci_info/" + arr_record.key).then(response => {
+          if (response.status === 200){
+            this.ci_yl_list();
+            var target_list = []
+            for (var j = 0,len=response.data.res_list.length; j < len; j++) {
+                this.mockData.shift(response.data.res_list[j])
+                target_list.push(response.data.res_list[j]['key'])
+              }
+            this.targetKeys = target_list;
+            this.linux_input = response.data.api_linux;
+            this.docker_input = response.data.api_docker;
+          }
+        })
+      },
+      del_ci(arr_record) {
+        axios.delete('del_ci/' + arr_record.key).then( response => {
+          if (response.data.result === 'success') {
+            this.ci_list(this.pagination_ci.current);
+            this.ci_clear();
+            this.$message.success('删除成功ヽ(●´ω｀●)ﾉ');
+          }
+        })
+      },
+      onCopy() {
+        this.$message.success('复制成功！٩(*Ӧ)و')
+      },
+      onError() {
+        this.$message.error('复制成功！(,,#ﾟДﾟ)')
+      },
     }
   };
 </script>
